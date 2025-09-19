@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 import plotly.express as px
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import logging
 
@@ -136,29 +135,27 @@ def main():
                             st.subheader('Materials with Price Changes Older Than 30 Days')
                             st.write("If the chart is not visible, please check if your file contains data matching the criteria or if the '자재명' and '효력시작일' columns exist.")
 
-                            # Set Korean font for matplotlib (may need to be installed on the system)
-                            plt.rcParams['font.family'] = 'Malgun Gothic'
-                            plt.rcParams['axes.unicode_minus'] = False
-
-                            # Draw the chart
-                            fig, ax = plt.subplots(figsize=(12, 8))
-                            ax.barh(df_unique_materials['자재명'], df_unique_materials['경과일수'], color='darkorange')
-
-                            # Set chart title and axis labels in English
-                            ax.set_title('Days Elapsed Since Last Price Change (> 30 Days)', fontsize=16)
-                            ax.set_xlabel('Days Elapsed', fontsize=12)
-                            ax.set_ylabel('Material Name', fontsize=12)
-                            ax.invert_yaxis()
-
-                            # Add days elapsed and date information on the bars
-                            for bar, date in zip(ax.patches, df_unique_materials['효력시작일']):
-                                width = bar.get_width()
-                                ax.text(width, bar.get_y() + bar.get_height()/2, 
-                                        f' {int(width)} days (Effective: {date.strftime("%Y-%m-%d")})', 
-                                        va='center', ha='left', fontsize=10, fontweight='bold')
-
-                            plt.tight_layout()
-                            st.pyplot(fig)
+                            # Draw the chart using Plotly
+                            fig = px.bar(
+                                df_unique_materials,
+                                x='경과일수',
+                                y='자재명',
+                                orientation='h',
+                                title='Days Elapsed Since Last Price Change (> 30 Days)',
+                                labels={'경과일수': 'Days Elapsed', '자재명': 'Material Name'},
+                                text='경과일수',
+                                color_discrete_sequence=['darkorange']
+                            )
+                            # Customize layout for better readability
+                            fig.update_layout(
+                                yaxis={'autorange': 'reversed'},
+                                title_font_size=20,
+                                margin={'t': 50, 'b': 20},
+                                xaxis_title_font_size=14,
+                                yaxis_title_font_size=14
+                            )
+                            fig.update_traces(texttemplate='%{text} days', textposition='outside')
+                            st.plotly_chart(fig, use_container_width=True)
                         else:
                             st.info("No materials with price changes older than 30 days were found.")
                     except Exception as e:
