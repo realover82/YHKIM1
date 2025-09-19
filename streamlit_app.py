@@ -4,11 +4,18 @@ import io
 import plotly.express as px
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+import logging
 
 # 'openpyxl' 및 'plotly', 'matplotlib' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
 # 설치 명령어: pip install openpyxl plotly matplotlib
 
+# 로그 설정 (Streamlit 콘솔에 로그 출력)
+logging.basicConfig(level=logging.INFO)
+
 # 한글 폰트 설정
+# 시스템에 'Malgun Gothic' 폰트가 없으면 다른 폰트(예: 'NanumGothic')를 설치해야 합니다.
+# Streamlit Cloud에서는 폰트 설치가 필요할 수 있습니다.
+# matplotlib 폰트 캐시를 지우고 다시 빌드하는 과정이 필요할 수 있습니다.
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -112,8 +119,18 @@ def main():
                         today = datetime.now()
                         df_to_chart['경과일수'] = (today - df_to_chart['효력시작일']).dt.days
 
+                        # **--- 로그 추가: 필터링 전 데이터 확인 ---**
+                        logging.info("--- [로그] 차트 데이터 필터링 시작 ---")
+                        logging.info("필터링 전 데이터:")
+                        logging.info(df_to_chart[['자재명', '효력시작일', '경과일수']].to_string())
+
                         # 경과일수가 30일보다 큰 항목만 필터링
                         df_over_30_days = df_to_chart[df_to_chart['경과일수'] > 30].copy()
+
+                        # **--- 로그 추가: 필터링 후 데이터 확인 ---**
+                        logging.info("필터링 후 (30일 초과) 데이터:")
+                        logging.info(df_over_30_days[['자재명', '효력시작일', '경과일수']].to_string())
+                        logging.info("--- [로그] 차트 데이터 필터링 완료 ---")
 
                         if not df_over_30_days.empty:
                             # 중복된 자재는 가장 최신 데이터만 남기기
