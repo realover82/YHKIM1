@@ -22,6 +22,7 @@ def display_excel_analysis_result(uploaded_file):
 
         st.markdown("---")
         st.subheader("분석 요약")
+        st.write("아래 표는 데이터의 개수, 평균, 최소/최대값 등 주요 통계 정보를 요약해서 보여줍니다.")
         st.dataframe(df.describe())
         
     except Exception as e:
@@ -62,12 +63,11 @@ def main():
 
         st.markdown("---")
         st.header("파일 내용 검색")
-        search_query_input = st.text_input("상품명, 상품 코드 등으로 검색하세요.", key="search_input", on_change=lambda: setattr(st.session_state, 'show_search_results', True))
+        search_query_input = st.text_input("상품명, 상품 코드 등으로 검색하세요.", key="search_input")
         
         if st.button("검색"):
             st.session_state.search_query = search_query_input
             st.session_state.show_search_results = True
-            st.session_state.show_chart = False
         
         if st.session_state.show_search_results:
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
@@ -93,7 +93,6 @@ def main():
         
         if st.button("차트 보기"):
             st.session_state.show_chart = True
-            st.session_state.show_search_results = False
         
         if st.session_state.show_chart:
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
@@ -121,6 +120,7 @@ def main():
                             df_unique_materials = df_unique_materials.sort_values(by='경과일수', ascending=False)
                             
                             st.subheader('가격 변경 후 30일 초과된 자재 목록')
+                            st.write("차트가 보이지 않는다면, 파일에 해당 조건에 맞는 데이터가 없거나 '자재명' 또는 '효력시작일' 열이 없는지 확인해 보세요.")
 
                             # 차트 그리기
                             fig, ax = plt.subplots(figsize=(12, 8))
