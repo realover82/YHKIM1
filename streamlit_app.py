@@ -5,10 +5,10 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
-# 'openpyxl' 및 'plotly' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
-# 설치 명령어: pip install openpyxl plotly-express
+# 'openpyxl' 및 'plotly', 'matplotlib' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
+# 설치 명령어: pip install openpyxl plotly matplotlib
 
-# --- XLSX 파일 분석 및 표시 함수 (사이드바에서 호출) ---
+# --- XLSX 파일 분석 및 표시 함수 (메인 화면에서 호출) ---
 def display_excel_analysis_result(uploaded_file):
     """업로드된 XLSX 파일 내용을 읽고 Streamlit에 표시하는 함수"""
     try:
@@ -22,7 +22,7 @@ def display_excel_analysis_result(uploaded_file):
 
         st.markdown("---")
         st.subheader("분석 요약")
-        st.write(df.describe())
+        st.dataframe(df.describe())
         
     except Exception as e:
         st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
@@ -34,8 +34,6 @@ def main():
     st.markdown("---")
 
     # 세션 상태 초기화
-    if 'show_all_data' not in st.session_state:
-        st.session_state.show_all_data = False
     if 'show_search_results' not in st.session_state:
         st.session_state.show_search_results = False
     if 'show_chart' not in st.session_state:
@@ -43,54 +41,34 @@ def main():
     if 'search_query' not in st.session_state:
         st.session_state.search_query = ""
     
-    # 사이드바
+    # 사이드바: 파일 업로드
     with st.sidebar:
         st.header("엑셀 파일 업로드")
         st.write("분석을 원하는 XLSX 파일을 업로드하세요.")
         uploaded_file = st.file_uploader("파일 선택", type=["xlsx"])
         if uploaded_file:
             st.session_state['uploaded_file'] = uploaded_file
-            st.success("파일이 업로드되었습니다. 메인 화면에서 분석을 진행하세요.")
         else:
             if 'uploaded_file' in st.session_state:
                 del st.session_state['uploaded_file']
             if 'df_data' in st.session_state:
                 del st.session_state['df_data']
-
-        st.markdown("---")
-        st.header("파일 내용 제어")
-        if st.button("파일 내용 전체 조회"):
-            st.session_state.show_all_data = True
-            st.session_state.show_search_results = False
-            st.session_state.show_chart = False
-
-        st.markdown("---")
-        st.header("검색")
-        search_query_input = st.text_input("상품명, 상품 코드 등으로 검색하세요.", key="search_input")
-        if st.button("검색"):
-            st.session_state.search_query = search_query_input
-            st.session_state.show_search_results = True
-            st.session_state.show_all_data = False
-            st.session_state.show_chart = False
-        
-        st.markdown("---")
-        st.header("차트")
-        if st.button("차트 보기"):
-            st.session_state.show_chart = True
-            st.session_state.show_all_data = False
-            st.session_state.show_search_results = False
-            
+    
     # 메인 화면
     if 'uploaded_file' in st.session_state:
         # 파일이 업로드되었을 때만 분석 결과를 표시
         uploaded_file_obj = st.session_state['uploaded_file']
         display_excel_analysis_result(uploaded_file_obj)
 
-        if st.session_state.show_all_data:
-            st.markdown("---")
-            st.header("파일 내용 전체 조회")
-            st.dataframe(st.session_state.df_data)
-
+        st.markdown("---")
+        st.header("파일 내용 검색")
+        search_query_input = st.text_input("상품명, 상품 코드 등으로 검색하세요.", key="search_input", on_change=lambda: setattr(st.session_state, 'show_search_results', True))
+        
+        if st.button("검색"):
+            st.session_state.search_query = search_query_input
+            st.session_state.show_search_results = True
+            st.session_state.show_chart = False
+        
         if st.session_state.show_search_results:
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
                 df_to_use = st.session_state.df_data
@@ -102,21 +80,22 @@ def main():
                         df_to_use.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)
                     ]
                     if not filtered_df.empty:
-                        st.markdown("---")
                         st.success(f"'{search_query}'(으)로 검색된 결과입니다.")
                         st.dataframe(filtered_df)
                     else:
-                        st.markdown("---")
                         st.warning(f"'{search_query}'에 대한 검색 결과가 없습니다.")
                 else:
-                    st.markdown("---")
                     st.info("검색어를 입력해주세요.")
         
+        st.markdown("---")
+        st.header("가격 변동 차트")
+        st.write("업로드된 파일의 '자재명'과 '효력시작일' 열을 기준으로 가격 변동 경과일수를 보여주는 차트를 생성합니다.")
+        
+        if st.button("차트 보기"):
+            st.session_state.show_chart = True
+            st.session_state.show_search_results = False
+        
         if st.session_state.show_chart:
-            st.markdown("---")
-            st.header("가격 변동 차트")
-            st.write("업로드된 파일의 '자재명'과 '효력시작일' 열을 기준으로 가격 변동 경과일수를 보여주는 차트를 생성합니다.")
-            
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
                 df_to_chart = st.session_state.df_data
                 
@@ -168,8 +147,6 @@ def main():
                         st.error(f"차트를 생성하는 중 오류가 발생했습니다: {e}")
                 else:
                     st.warning("차트를 생성하려면 업로드된 파일에 '자재명'과 '효력시작일' 열이 포함되어 있어야 합니다.")
-            else:
-                st.info("차트를 보려면 먼저 '엑셀 파일 업로드' 탭에서 파일을 업로드해주세요.")
 
 if __name__ == "__main__":
     main()
