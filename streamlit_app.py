@@ -5,19 +5,19 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import logging
 
-# Install 'openpyxl', 'plotly', and 'matplotlib' to handle XLSX files and generate charts.
-# Installation command: pip install openpyxl plotly matplotlib
+# 'openpyxl'과 'plotly' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
+# 설치 명령어: pip install openpyxl plotly
 
-# Logging configuration (outputs logs to the Streamlit console)
+# 로그 설정 (Streamlit 콘솔에 로그 출력)
 logging.basicConfig(level=logging.INFO)
 
-# --- XLSX File Analysis and Display Function (Called from Main Screen) ---
+# --- XLSX 파일 분석 및 표시 함수 (메인 화면에서 호출) ---
 def display_excel_analysis_result(uploaded_file):
-    """Reads the contents of an uploaded XLSX file and displays them in Streamlit"""
+    """업로드된 XLSX 파일 내용을 읽고 Streamlit에 표시하는 함수"""
     try:
-        # Read the XLSX file
+        # XLSX 파일 읽기
         df = pd.read_excel(uploaded_file)
-        st.session_state['df_data'] = df  # Store the uploaded file in session state
+        st.session_state['df_data'] = df  # 업로드된 파일을 세션 상태에 저장
         st.success(f"'{uploaded_file.name}' 파일이 성공적으로 업로드되었습니다.")
         st.markdown("---")
         st.subheader("업로드된 파일 내용 미리보기")
@@ -31,13 +31,13 @@ def display_excel_analysis_result(uploaded_file):
     except Exception as e:
         st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
 
-# --- Main Application Logic ---
+# --- 메인 애플리케이션 로직 ---
 def main():
     st.set_page_config(layout="wide")
     st.title("통합 데이터 분석 및 조회 시스템")
     st.markdown("---")
 
-    # Initialize session state
+    # 세션 상태 초기화
     if 'show_search_results' not in st.session_state:
         st.session_state.show_search_results = False
     if 'show_chart' not in st.session_state:
@@ -45,7 +45,7 @@ def main():
     if 'search_query' not in st.session_state:
         st.session_state.search_query = ""
     
-    # Sidebar: File Upload
+    # 사이드바: 파일 업로드
     with st.sidebar:
         st.header("엑셀 파일 업로드")
         st.write("분석을 원하는 XLSX 파일을 업로드하세요.")
@@ -58,9 +58,9 @@ def main():
             if 'df_data' in st.session_state:
                 del st.session_state['df_data']
     
-    # Main screen
+    # 메인 화면
     if 'uploaded_file' in st.session_state:
-        # Display analysis results only when a file is uploaded
+        # 파일이 업로드되었을 때만 분석 결과를 표시
         uploaded_file_obj = st.session_state['uploaded_file']
         display_excel_analysis_result(uploaded_file_obj)
 
@@ -78,7 +78,7 @@ def main():
                 search_query = st.session_state.search_query
 
                 if search_query:
-                    # Search across all columns, case-insensitive
+                    # 모든 열에서 대소문자 구분 없이 검색
                     filtered_df = df_to_use[
                         df_to_use.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)
                     ]
@@ -91,58 +91,65 @@ def main():
                     st.info("검색어를 입력해주세요.")
         
         st.markdown("---")
-        st.header("Price Change Chart")
-        st.write("Generates a chart showing the days elapsed since the last price change, based on the '자재명' (Material Name) and '효력시작일' (Effective Date) columns of the uploaded file.")
+        st.header("가격 변동 차트")
+        st.write("업로드된 파일의 '자재명'과 '효력시작일' 열을 기준으로 가격 변동 경과일수를 보여주는 차트를 생성합니다.")
         
-        if st.button("View Chart"):
+        if st.button("차트 보기"):
             st.session_state.show_chart = True
         
         if st.session_state.show_chart:
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
                 df_to_chart = st.session_state.df_data
                 
-                # Check for the required columns ('자재명', '효력시작일') for chart generation
+                # 차트 생성을 위해 필요한 열('자재명', '효력시작일')이 있는지 확인
                 if '자재명' in df_to_chart.columns and '효력시작일' in df_to_chart.columns:
                     try:
-                        # Convert '효력시작일' to datetime format
+                        # '효력시작일'을 날짜 형식으로 변환
                         df_to_chart['효력시작일'] = pd.to_datetime(df_to_chart['효력시작일'])
 
-                        # Calculate days elapsed from today
+                        # 오늘 날짜를 기준으로 경과 일수 계산
                         today = datetime.now()
                         df_to_chart['경과일수'] = (today - df_to_chart['효력시작일']).dt.days
 
                         # **--- Log added: Check data before filtering ---**
-                        logging.info("--- [Log] Starting chart data filtering ---")
-                        logging.info("Data before filtering:")
+                        logging.info("--- [로그] 차트 데이터 필터링 시작 ---")
+                        logging.info("필터링 전 데이터:")
                         logging.info(df_to_chart[['자재명', '효력시작일', '경과일수']].to_string())
 
-                        # Filter for entries where days elapsed is greater than 30
+                        # 경과일수가 30일보다 큰 항목만 필터링
                         df_over_30_days = df_to_chart[df_to_chart['경과일수'] > 30].copy()
 
                         # **--- Log added: Check data after filtering ---**
-                        logging.info("Data after filtering (> 30 days):")
+                        logging.info("필터링 후 (30일 초과) 데이터:")
                         logging.info(df_over_30_days[['자재명', '효력시작일', '경과일수']].to_string())
-                        logging.info("--- [Log] Chart data filtering complete ---")
+                        logging.info("--- [로그] 차트 데이터 필터링 완료 ---")
 
                         if not df_over_30_days.empty:
-                            # Keep only the latest data for duplicate materials
+                            # 중복된 자재는 가장 최신 데이터만 남기기
                             df_sorted = df_over_30_days.sort_values(by=['자재명', '효력시작일'], ascending=[True, False])
                             df_unique_materials = df_sorted.drop_duplicates(subset='자재명')
 
-                            # Sort by days elapsed in descending order
+                            # '자재코드' 열이 있다면 '자재명'과 함께 라벨 생성
+                            if '자재코드' in df_unique_materials.columns:
+                                df_unique_materials['차트_라벨'] = df_unique_materials['자재명'] + ' (' + df_unique_materials['자재코드'].astype(str) + ')'
+                                y_label = '차트_라벨'
+                            else:
+                                y_label = '자재명'
+                            
+                            # 경과일수 기준 내림차순 정렬
                             df_unique_materials = df_unique_materials.sort_values(by='경과일수', ascending=False)
                             
-                            st.subheader('Materials with Price Changes Older Than 30 Days')
-                            st.write("If the chart is not visible, please check if your file contains data matching the criteria or if the '자재명' and '효력시작일' columns exist.")
+                            st.subheader('가격 변경 후 30일 초과된 자재 목록')
+                            st.write("차트가 보이지 않는다면, 파일에 해당 조건에 맞는 데이터가 없거나 '자재명' 또는 '효력시작일' 열이 있는지 확인해 보세요.")
 
-                            # Draw the chart using Plotly
+                            # Plotly를 사용하여 차트 그리기
                             fig = px.bar(
                                 df_unique_materials,
                                 x='경과일수',
-                                y='자재명',
+                                y=y_label,
                                 orientation='h',
-                                title='Days Elapsed Since Last Price Change (> 30 Days)',
-                                labels={'경과일수': 'Days Elapsed', '자재명': 'Material Name'},
+                                title='가격 변경 후 경과 일수 (> 30일)',
+                                labels={'경과일수': '경과 일수', '자재명': '자재명'},
                                 text='경과일수',
                                 color_discrete_sequence=['darkorange']
                             )
@@ -157,11 +164,11 @@ def main():
                             fig.update_traces(texttemplate='%{text} days', textposition='outside')
                             st.plotly_chart(fig, use_container_width=True)
                         else:
-                            st.info("No materials with price changes older than 30 days were found.")
+                            st.info("가격 변경 후 30일 초과된 자재가 없습니다.")
                     except Exception as e:
-                        st.error(f"An error occurred while generating the chart: {e}")
+                        st.error(f"차트를 생성하는 중 오류가 발생했습니다: {e}")
                 else:
-                    st.warning("To generate the chart, your uploaded file must contain the '자재명' and '효력시작일' columns.")
+                    st.warning("차트를 생성하려면 업로드된 파일에 '자재명'과 '효력시작일' 열이 포함되어 있어야 합니다.")
 
 if __name__ == "__main__":
     main()
