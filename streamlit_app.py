@@ -8,6 +8,10 @@ from datetime import datetime, timedelta
 # 'openpyxl' 및 'plotly', 'matplotlib' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
 # 설치 명령어: pip install openpyxl plotly matplotlib
 
+# 한글 폰트 설정
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
 # --- XLSX 파일 분석 및 표시 함수 (메인 화면에서 호출) ---
 def display_excel_analysis_result(uploaded_file):
     """업로드된 XLSX 파일 내용을 읽고 Streamlit에 표시하는 함수"""
@@ -20,10 +24,10 @@ def display_excel_analysis_result(uploaded_file):
         st.subheader("업로드된 파일 내용 미리보기")
         st.dataframe(df)
 
-        # st.markdown("---")
-        # st.subheader("분석 요약")
-        # st.write("아래 표는 데이터의 개수, 평균, 최소/최대값 등 주요 통계 정보를 요약해서 보여줍니다.")
-        # st.dataframe(df.describe())
+        st.markdown("---")
+        st.subheader("분석 요약")
+        st.write("아래 표는 데이터의 개수, 평균, 최소/최대값 등 주요 통계 정보를 요약해서 보여줍니다.")
+        st.dataframe(df.describe())
         
     except Exception as e:
         st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
