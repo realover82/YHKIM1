@@ -33,10 +33,12 @@ def main():
     st.markdown("---")
 
     # 세션 상태 초기화
-    if 'show_search_results' not in st.session_state:
-        st.session_state.show_search_results = False
     if 'search_query' not in st.session_state:
         st.session_state.search_query = ""
+    if 'search_results_df' not in st.session_state:
+        st.session_state.search_results_df = pd.DataFrame()
+    if 'show_chart' not in st.session_state:
+        st.session_state.show_chart = False
     
     # 사이드바: 파일 업로드
     with st.sidebar:
@@ -58,91 +60,96 @@ def main():
         display_excel_analysis_result(uploaded_file_obj)
 
         st.markdown("---")
-        st.header("파일 내용 검색 및 차트 조회")
+        st.header("파일 내용 검색")
         search_query_input = st.text_input("자재명 또는 자재코드로 검색하세요.", key="search_input")
         
         if st.button("검색"):
-            st.session_state.search_query = search_query_input
-            st.session_state.show_search_results = True
-            
-        if st.session_state.show_search_results:
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
                 df_to_use = st.session_state.df_data
-                search_query = st.session_state.search_query
+                search_query = search_query_input
 
                 if search_query:
                     # '자재명' 또는 '자재코드' 열에서 검색
-                    if '자재명' in df_to_use.columns and '자재코드' in df_to_use.columns:
+                    cols_to_search = []
+                    if '자재명' in df_to_use.columns:
+                        cols_to_search.append('자재명')
+                    if '자재코드' in df_to_use.columns:
+                        cols_to_search.append('자재코드')
+
+                    if cols_to_search:
                         filtered_df = df_to_use[
-                            df_to_use['자재명'].astype(str).str.contains(search_query, case=False) |
-                            df_to_use['자재코드'].astype(str).str.contains(search_query, case=False)
+                            df_to_use.apply(lambda row: any(row[col].astype(str).lower().find(search_query.lower()) != -1 for col in cols_to_search), axis=1)
                         ].copy()
-                    elif '자재명' in df_to_use.columns:
-                        filtered_df = df_to_use[
-                            df_to_use['자재명'].astype(str).str.contains(search_query, case=False)
-                        ].copy()
-                    elif '자재코드' in df_to_use.columns:
-                        filtered_df = df_to_use[
-                            df_to_use['자재코드'].astype(str).str.contains(search_query, case=False)
-                        ].copy()
+                        st.session_state.search_results_df = filtered_df
                     else:
                         st.warning("검색을 위해 '자재명' 또는 '자재코드' 열이 필요합니다.")
-                        filtered_df = pd.DataFrame() # 빈 데이터프레임으로 초기화
-
-                    if not filtered_df.empty:
-                        st.success(f"'{search_query}'(으)로 검색된 결과입니다.")
-                        st.dataframe(filtered_df)
-
-                        # 검색된 데이터로 차트 생성 및 표시
-                        st.markdown("---")
-                        st.header("가격 변동 차트")
-                        st.write("검색된 자재의 가격 변동 경과일수를 보여주는 차트를 생성합니다. 같은 자재의 여러 행이 모두 표시됩니다.")
-                        
-                        if '효력시작일' in filtered_df.columns:
-                            try:
-                                filtered_df['효력시작일'] = pd.to_datetime(filtered_df['효력시작일'])
-                                today = datetime.now()
-                                filtered_df['경과일수'] = (today - filtered_df['효력시작일']).dt.days
-
-                                if not filtered_df.empty:
-                                    # 모든 행을 차트에 포함
-                                    if '자재코드' in filtered_df.columns:
-                                        # '자재코드'가 있는 경우 라벨을 병기
-                                        filtered_df['차트_라벨'] = filtered_df['자재명'] + ' (' + filtered_df['자재코드'].astype(str) + ')'
-                                        y_label = '차트_라벨'
-                                    else:
-                                        y_label = '자재명'
-
-                                    fig = px.bar(
-                                        filtered_df.sort_values(by='경과일수', ascending=False),
-                                        x='경과일수',
-                                        y=y_label,
-                                        orientation='h',
-                                        title=f'"{search_query}" 가격 변경 경과 일수',
-                                        labels={'경과일수': '경과 일수'},
-                                        text='경과일수',
-                                        color_discrete_sequence=['darkorange']
-                                    )
-                                    fig.update_layout(
-                                        yaxis={'autorange': 'reversed'},
-                                        title_font_size=20,
-                                        margin={'t': 50, 'b': 20},
-                                        xaxis_title_font_size=14,
-                                        yaxis_title_font_size=14
-                                    )
-                                    fig.update_traces(texttemplate='%{text} days', textposition='outside')
-                                    st.plotly_chart(fig, use_container_width=True)
-                                else:
-                                    st.info("선택된 자재에 대한 데이터가 없습니다.")
-
-                            except Exception as e:
-                                st.error(f"차트를 생성하는 중 오류가 발생했습니다: {e}")
-                        else:
-                            st.warning("차트를 생성하려면 '효력시작일' 열이 포함되어 있어야 합니다.")
-                    else:
-                        st.warning(f"'{search_query}'에 대한 검색 결과가 없습니다.")
+                        st.session_state.search_results_df = pd.DataFrame()
                 else:
+                    st.session_state.search_results_df = pd.DataFrame()
                     st.info("검색어를 입력해주세요.")
             
+        # 검색 결과 표시
+        if not st.session_state.search_results_df.empty:
+            st.success("검색 결과:")
+            st.dataframe(st.session_state.search_results_df)
+        elif st.session_state.search_query:
+             st.warning(f"'{st.session_state.search_query}'에 대한 검색 결과가 없습니다.")
+
+        st.markdown("---")
+        st.header("가격 변동 차트")
+        st.write("검색된 자재의 가격 변동 경과일수를 보여주는 차트를 생성합니다.")
+        
+        if st.button("차트 보기"):
+            st.session_state.show_chart = True
+
+        if st.session_state.show_chart and not st.session_state.search_results_df.empty:
+            filtered_df = st.session_state.search_results_df
+
+            if '효력시작일' in filtered_df.columns:
+                try:
+                    filtered_df['효력시작일'] = pd.to_datetime(filtered_df['효력시작일'])
+                    today = datetime.now()
+                    filtered_df['경과일수'] = (today - filtered_df['효력시작일']).dt.days
+
+                    if not filtered_df.empty:
+                        # 차트 라벨 생성: 자재명(자재코드)(공급업체)
+                        label_cols = ['자재명', '자재코드', '공급업체']
+                        for col in label_cols:
+                            if col not in filtered_df.columns:
+                                filtered_df[col] = '' # 해당 열이 없으면 빈 문자열로 채움
+                        
+                        filtered_df['차트_라벨'] = filtered_df.apply(
+                            lambda row: f"{row['자재명']} ({row['자재코드']}) ({row['공급업체']})", axis=1
+                        )
+                        
+                        fig = px.bar(
+                            filtered_df.sort_values(by='경과일수', ascending=False),
+                            x='경과일수',
+                            y='차트_라벨',
+                            orientation='h',
+                            title=f'"{st.session_state.search_query}" 가격 변경 경과 일수',
+                            labels={'경과일수': '경과 일수', '차트_라벨': '자재 정보'},
+                            text='경과일수',
+                            color_discrete_sequence=['darkorange']
+                        )
+                        fig.update_layout(
+                            yaxis={'autorange': 'reversed'},
+                            title_font_size=20,
+                            margin={'t': 50, 'b': 20},
+                            xaxis_title_font_size=14,
+                            yaxis_title_font_size=14
+                        )
+                        fig.update_traces(texttemplate='%{text} days', textposition='outside')
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("차트를 생성할 데이터가 없습니다. 먼저 검색을 해주세요.")
+
+                except Exception as e:
+                    st.error(f"차트를 생성하는 중 오류가 발생했습니다: {e}")
+            else:
+                st.warning("차트를 생성하려면 '효력시작일' 열이 포함되어 있어야 합니다.")
+        elif st.session_state.show_chart and st.session_state.search_results_df.empty:
+            st.info("차트를 생성하려면 먼저 검색을 해주세요.")
+
 if __name__ == "__main__":
     main()
