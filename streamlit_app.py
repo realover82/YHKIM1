@@ -77,9 +77,12 @@ def main():
                         cols_to_search.append('자재코드')
 
                     if cols_to_search:
-                        filtered_df = df_to_use[
-                            df_to_use.apply(lambda row: any(row[col].astype(str).lower().find(search_query.lower()) != -1 for col in cols_to_search), axis=1)
-                        ].copy()
+                        combined_mask = pd.Series([False] * len(df_to_use))
+                        for col in cols_to_search:
+                            col_str = df_to_use[col].astype(str)
+                            combined_mask |= col_str.str.contains(search_query, case=False, na=False)
+                        
+                        filtered_df = df_to_use[combined_mask].copy()
                         st.session_state.search_results_df = filtered_df
                     else:
                         st.warning("검색을 위해 '자재명' 또는 '자재코드' 열이 필요합니다.")
