@@ -1,12 +1,11 @@
-#
 import streamlit as st
 import pandas as pd
 import io
 import plotly.express as px
 from datetime import datetime, timedelta
 
-# 'openpyxl' 라이브러리가 설치되어 있어야 XLSX 파일을 처리할 수 있습니다.
-# 설치 명령어: pip install openpyxl
+# 'openpyxl' 및 'plotly' 라이브러리가 설치되어 있어야 XLSX 파일을 처리하고 차트를 생성할 수 있습니다.
+# 설치 명령어: pip install openpyxl plotly-express
 
 # --- 데이터베이스 역할을 할 샘플 데이터 생성 ---
 # 실제 DB에 연결하려면 이 부분을 수정해야 합니다.
