@@ -98,8 +98,8 @@ def main():
             if 'df_data' in st.session_state and not st.session_state.df_data.empty:
                 df_to_chart = st.session_state.df_data
                 
-                # 차트 생성을 위해 필요한 열('업체', '효력시작일')이 있는지 확인
-                if '업체' in df_to_chart.columns and '효력시작일' in df_to_chart.columns:
+                # 차트 생성을 위해 필요한 열('자재명', '효력시작일')이 있는지 확인
+                if '자재명' in df_to_chart.columns and '효력시작일' in df_to_chart.columns:
                     try:
                         # '효력시작일'을 날짜 형식으로 변환
                         df_to_chart['효력시작일'] = pd.to_datetime(df_to_chart['효력시작일'])
@@ -112,24 +112,24 @@ def main():
                         df_over_30_days = df_to_chart[df_to_chart['경과일수'] > 30].copy()
 
                         if not df_over_30_days.empty:
-                            # 중복된 업체는 가장 최신 데이터만 남기기
-                            df_sorted = df_over_30_days.sort_values(by=['업체', '효력시작일'], ascending=[True, False])
-                            df_unique_materials = df_sorted.drop_duplicates(subset='업체')
+                            # 중복된 자재는 가장 최신 데이터만 남기기
+                            df_sorted = df_over_30_days.sort_values(by=['자재명', '효력시작일'], ascending=[True, False])
+                            df_unique_materials = df_sorted.drop_duplicates(subset='자재명')
 
                             # 경과일수 기준 내림차순 정렬
                             df_unique_materials = df_unique_materials.sort_values(by='경과일수', ascending=False)
                             
-                            st.subheader('가격 변경 후 30일 초과된 업체 목록')
-                            st.write("차트가 보이지 않는다면, 파일에 해당 조건에 맞는 데이터가 없거나 '업체' 또는 '효력시작일' 열이 없는지 확인해 보세요.")
+                            st.subheader('가격 변경 후 30일 초과된 자재 목록')
+                            st.write("차트가 보이지 않는다면, 파일에 해당 조건에 맞는 데이터가 없거나 '자재명' 또는 '효력시작일' 열이 없는지 확인해 보세요.")
 
                             # 차트 그리기
                             fig, ax = plt.subplots(figsize=(12, 8))
-                            ax.barh(df_unique_materials['업체'], df_unique_materials['경과일수'], color='darkorange')
+                            ax.barh(df_unique_materials['자재명'], df_unique_materials['경과일수'], color='darkorange')
 
                             # 차트 제목 및 축 레이블 설정
                             ax.set_title('가격 변경 후 경과 일수 (> 30일)', fontsize=16)
                             ax.set_xlabel('경과 일수', fontsize=12)
-                            ax.set_ylabel('업체', fontsize=12)
+                            ax.set_ylabel('자재명', fontsize=12)
                             ax.invert_yaxis()
 
                             # 막대 위에 경과일수와 날짜 정보 추가
@@ -146,7 +146,7 @@ def main():
                     except Exception as e:
                         st.error(f"차트를 생성하는 중 오류가 발생했습니다: {e}")
                 else:
-                    st.warning("차트를 생성하려면 업로드된 파일에 '업체'와 '효력시작일' 열이 포함되어 있어야 합니다.")
+                    st.warning("차트를 생성하려면 업로드된 파일에 '자재명'과 '효력시작일' 열이 포함되어 있어야 합니다.")
 
 if __name__ == "__main__":
     main()
