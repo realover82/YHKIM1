@@ -129,40 +129,53 @@ def main():
                             df_sorted = df_over_30_days.sort_values(by=['자재명', '효력시작일'], ascending=[True, False])
                             df_unique_materials = df_sorted.drop_duplicates(subset='자재명')
 
-                            # '자재코드' 열이 있다면 '자재명'과 함께 라벨 생성
-                            if '자재코드' in df_unique_materials.columns:
-                                df_unique_materials['차트_라벨'] = df_unique_materials['자재명'] + ' (' + df_unique_materials['자재코드'].astype(str) + ')'
-                                y_label = '차트_라벨'
-                            else:
-                                y_label = '자재명'
-                            
-                            # 경과일수 기준 내림차순 정렬
-                            df_unique_materials = df_unique_materials.sort_values(by='경과일수', ascending=False)
-                            
                             st.subheader('가격 변경 후 30일 초과된 자재 목록')
                             st.write("차트가 보이지 않는다면, 파일에 해당 조건에 맞는 데이터가 없거나 '자재명' 또는 '효력시작일' 열이 있는지 확인해 보세요.")
+                            
+                            # '자재명'을 드롭다운 메뉴로 생성
+                            material_options = ['전체 보기'] + df_unique_materials['자재명'].unique().tolist()
+                            selected_material = st.selectbox('자재명으로 검색하기', material_options)
 
-                            # Plotly를 사용하여 차트 그리기
-                            fig = px.bar(
-                                df_unique_materials,
-                                x='경과일수',
-                                y=y_label,
-                                orientation='h',
-                                title='가격 변경 후 경과 일수 (> 30일)',
-                                labels={'경과일수': '경과 일수', '자재명': '자재명'},
-                                text='경과일수',
-                                color_discrete_sequence=['darkorange']
-                            )
-                            # Customize layout for better readability
-                            fig.update_layout(
-                                yaxis={'autorange': 'reversed'},
-                                title_font_size=20,
-                                margin={'t': 50, 'b': 20},
-                                xaxis_title_font_size=14,
-                                yaxis_title_font_size=14
-                            )
-                            fig.update_traces(texttemplate='%{text} days', textposition='outside')
-                            st.plotly_chart(fig, use_container_width=True)
+                            df_to_display = pd.DataFrame() # 초기화
+                            
+                            if selected_material == '전체 보기':
+                                df_to_display = df_unique_materials.sort_values(by='경과일수', ascending=False)
+                            else:
+                                # 선택된 자재명에 해당하는 데이터만 필터링
+                                df_to_display = df_unique_materials[df_unique_materials['자재명'] == selected_material]
+                            
+                            if not df_to_display.empty:
+                                # '자재코드' 열이 있다면 '자재명'과 함께 라벨 생성
+                                if '자재코드' in df_to_display.columns:
+                                    df_to_display['차트_라벨'] = df_to_display['자재명'] + ' (' + df_to_display['자재코드'].astype(str) + ')'
+                                    y_label = '차트_라벨'
+                                else:
+                                    y_label = '자재명'
+                                
+                                # Plotly를 사용하여 차트 그리기
+                                fig = px.bar(
+                                    df_to_display,
+                                    x='경과일수',
+                                    y=y_label,
+                                    orientation='h',
+                                    title='가격 변경 후 경과 일수 (> 30일)',
+                                    labels={'경과일수': '경과 일수', '자재명': '자재명'},
+                                    text='경과일수',
+                                    color_discrete_sequence=['darkorange']
+                                )
+                                # Customize layout for better readability
+                                fig.update_layout(
+                                    yaxis={'autorange': 'reversed'},
+                                    title_font_size=20,
+                                    margin={'t': 50, 'b': 20},
+                                    xaxis_title_font_size=14,
+                                    yaxis_title_font_size=14
+                                )
+                                fig.update_traces(texttemplate='%{text} days', textposition='outside')
+                                st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                st.info("선택된 자재에 대한 데이터가 없습니다.")
+
                         else:
                             st.info("가격 변경 후 30일 초과된 자재가 없습니다.")
                     except Exception as e:
